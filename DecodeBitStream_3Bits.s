@@ -193,6 +193,7 @@ CNTR	SET	CNTR+4
 DecodeBitStream_3Bits_Words_InitState
 		move.l	a1,DecodeBitStream_3Bits_ReadPtr(a0)
 		move.l	a2,DecodeBitStream_3Bits_Lookup(a0)
+		clr.w	DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
 		rts
 
 ;-------------------------------------------------------------------------------------
@@ -205,41 +206,130 @@ DecodeBitStream_3Bits_Words_InitState
 
 DecodeBitStream_3Bits_Words_Decode
 
+		movem.l	d2-d3/a2,-(sp)
+
+		move.w	DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0),d1
+		bne.s	.nCopyLeadingEntries
+
+		; copy a portion of previously-decoded buffer contents to output buffer,
+		;   up until the next even 8-entry group
+
+		move.w	d1,d2
+		cmp.w	d0,d2
+		bhs.s	.nClamp
+		move.w	d0,d2
+.nClamp
+		sub.w	d2,d0
+
+		move.w	d1,d3
+		sub.w	d2,d3
+		move.w	d3,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
+		
+		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf+8*2(a0),a2
+		add.w	d1,d1
+		sub.w	d1,a2
+
+		not.w	d2
+		add.w	d2,d2
+		jmp	.copyLeadingEntriesEnd(pc,d2.w)
+.copyLeadingEntries
+		REPT	8
+		move.w	(a2)+,(a1)+
+		ENDR
+.copyLeadingEntriesEnd
+		
+		
+.nCopyLeadingEntries
+
+		tst.w	d0
+		beq.s	.decodeDoneWithoutStreamReads
+		
+		
+DECODE8		MACRO	temp0,temp1,output
+
+		; Read 3 bytes, output 8 entries
+
+		; a2 - input stream
+		; a3 - lookup table for     ****b2b1b0a2a1a0 -> word with a, word with b
+		; a4 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with c, <unused>
+		; a4 - lookup table for   f0h2h1h0g2g1g0f2f1 -> <unused>, word with f
+		; a5 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with d, word with e
+		; a6 - lookup table for   f0h2h1h0g2g1g0f2f1 -> word with g, word with h
+
+		moveq	#0,\1
+		move.b	(a2)+,\1		; fetch c[1..0], b, a
+		add.w	\1,\1
+		add.w	\1,\1
+		move.l	(a3,\1.l),(\3)+		; extract b, a
+
+		moveq	#0,\2
+		move.b	(a2)+,\1		; fetch f[0], e, d, c[2]
+		move.b	\1,\2
+		add.w	\1,\1
+		add.w	\1,\1
+		move.w	(a4,\1.l),(\3)+		; extract c
+		move.l	(a5,\1.l),(\3)+		; extract e, d
+
+		add.w	\2,\2
+		move.b	(a2)+,\2		; fetch h, g, f[2..1]
+		add.w	\2,\2
+		add.w	\2,\2
+		move.w	2(a4,\2.l),(\3)+	; extract f
+		move.l	(a6,\2.l),(\3)+		; extract h, g
+		ENDM
+
+		movem.l	a3-a6,-(sp)
+
 		move.l	DecodeBitStream_3Bits_ReadPtr(a0),a2
 		move.l	DecodeBitStream_3Bits_Lookup(a0),a6
 		lea	DecodeBitStream_3Bits_Lookup_AB(a6),a3
 		lea	DecodeBitStream_3Bits_Lookup_CF(a6),a4
 		lea	DecodeBitStream_3Bits_Lookup_DE(a6),a5
 		lea	DecodeBitStream_3Bits_Lookup_GH(a6),a6
+
+		subq.w	#8,d0
+		bmi.s	.nDecode8Direct
 		
-; Read 3 bytes, output 8 entries
+		; Decode aligned groups of 8 entries and output directly to output buffer
+		
+.decode8Direct
+		DECODE8	d1,d2,a1
 
-.decode8
+		subq.w	#8,d0
+		bpl.s	.decode8Direct
 
-; a3 - lookup table for     ****b2b1b0a2a1a0 -> word with a, word with b
-; a4 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with c, <unused>
-; a4 - lookup table for   f0h2h1h0g2g1g0f2f1 -> <unused>, word with f
-; a5 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with d, word with e
-; a6 - lookup table for   f0h2h1h0g2g1g0f2f1 -> word with g, word with h
+.nDecode8Direct
+		addq.w	#8,d0
+		beq.s	.decodeDoneWithStreamReads
 
-		moveq	#0,d0
-		move.b	(a2)+,d0		; fetch c[1..0], b, a
+		; Decode group of 8 entries into temp buffer, and copy a portion thereof to output buffer
+		
+		move.l	a1,d3
+		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf(a0),a1
+		DECODE8	d1,d2,a1
+		subq.w	#8*2,a1
+
+		move.w	d0,DecodeBitStream_3Bits_Decoded8Entries_NumConsumed(a0)
+		
+		move.l	d3,a3
+		not.w	d0
 		add.w	d0,d0
-		add.w	d0,d0
-		move.l	(a3,d0.l),(a6)+		; extract b, a
+		
+		jmp	.copyTrailingEntriesEnd(pc,d0.w)
+		
+.copyTrailingEntries
+		REPT	8
+		move.w	(a1)+,(a3)+
+		ENDR
+.copyTrailingEntriesEnd
 
-		moveq	#0,d1
-		move.b	(a2)+,d0		; fetch f[0], e, d, c[2]
-		move.b	d0,d1
-		add.w	d0,d0
-		add.w	d0,d0
-		move.w	(a4,d0.l),(a6)+		; extract c
-		move.l	(a5,d0.l),(a6)+		; extract e, d
+.decodeDoneWithStreamReads
+		move.l	a2,DecodeBitStream_3Bits_ReadPtr(a0)
 
-		add.w	d1,d1
-		move.b	(a2)+,d1		; fetch h, g, f[2..1]
-		add.w	d1,d1
-		add.w	d1,d1
-		move.w	2(a4,d1.l),(a6)+	; extract f
-		move.l	(a6,d1.l),(a6)+		; extract h, g
+		movem.l	(sp)+,a3-a6
+		
+.decodeDoneWithoutStreamReads
 
+		movem.l	(sp)+,d2-d3/a2
+
+		rts
