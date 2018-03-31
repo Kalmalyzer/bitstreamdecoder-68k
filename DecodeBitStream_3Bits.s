@@ -228,7 +228,7 @@ DecodeBitStream_3Bits_Words_Decode
 
 		move.w	d1,d2
 		cmp.w	d0,d2
-		bhs.s	.nClamp
+		bls.s	.nClamp
 		move.w	d0,d2
 .nClamp
 		sub.w	d2,d0
