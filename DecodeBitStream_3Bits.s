@@ -236,11 +236,11 @@ DecodeBitStream_3Bits_Words_Decode
 		sub.w	d2,d1
 		move.w	d1,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
 
-		not.w	d2
+		neg.w	d2
 		add.w	d2,d2
 		jmp	.copyLeadingEntriesEnd(pc,d2.w)
 .copyLeadingEntries
-		REPT	8
+		REPT	7
 		move.w	(a2)+,(a1)+
 		ENDR
 .copyLeadingEntriesEnd
