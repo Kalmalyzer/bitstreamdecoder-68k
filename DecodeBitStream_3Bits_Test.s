@@ -1,5 +1,5 @@
 
-		include	"DecodeBitStream_3Bits_Test.i"
+		include	"DecodeBitStream_3Bits.i"
 
 		section	code,code
 
@@ -24,10 +24,26 @@ Initialize
 		rts
 
 Decode
+		
 		lea	BitStreamOutput,a1
 		lea	Decode_State,a0
 		move.w	#2,d0
 		bsr	DecodeBitStream_3Bits_Words_Decode
+
+;		lea	BitStreamOutput,a1
+;		lea	Decode_State,a0
+;		move.w	#0,d0
+;		bsr	DecodeBitStream_3Bits_Words_Decode
+
+;		lea	BitStreamOutput,a1
+;		lea	Decode_State,a0
+;		move.w	#6,d0
+;		bsr	DecodeBitStream_3Bits_Words_Decode
+
+;		lea	BitStreamOutput,a1
+;		lea	Decode_State,a0
+;		move.w	#16,d0
+;		bsr	DecodeBitStream_3Bits_Words_Decode
 
 		rts
 		
@@ -60,10 +76,20 @@ Validate
 		section	data,data
 
 BitStreamInput
-		dc.b	%00000000
-		dc.b	%00000000
-		dc.b	%00000000
+		dc.b	%10001000
+		dc.b	%11000110
+		dc.b	%11111010
+		
+		dc.b	%01110111
+		dc.b	%00111001
+		dc.b	%00000101
 
+		dc.b	%10001000
+		dc.b	%11000110
+		dc.b	%11111010
+
+		even
+		
 Decode_TranslationTable
 		dc.w	$0f00
 		dc.w	$1e11
@@ -76,7 +102,31 @@ Decode_TranslationTable
 		
 ExpectedOutput
 		dc.w	$0f00
+		dc.w	$1e11
+		dc.w	$2d22
+		dc.w	$3c33
+		dc.w	$4b44
+		dc.w	$5a55
+		dc.w	$6966
+		dc.w	$7877
+
+		dc.w	$7877
+		dc.w	$6966
+		dc.w	$5a55
+		dc.w	$4b44
+		dc.w	$3c33
+		dc.w	$2d22
+		dc.w	$1e11
 		dc.w	$0f00
+
+		dc.w	$0f00
+		dc.w	$1e11
+		dc.w	$2d22
+		dc.w	$3c33
+		dc.w	$4b44
+		dc.w	$5a55
+		dc.w	$6966
+		dc.w	$7877
 ExpectedOutputEnd
 
 		section	bss,bss

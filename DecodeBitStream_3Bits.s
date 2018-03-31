@@ -13,12 +13,14 @@
 ;	a0	DecodeBitStream_3Bits_Lookup*	lookup
 ;	a1	uint16_t[8]			bit-to-word translation table
 
+		XDEF	DecodeBitStream_3Bits_Words_CreateLookup
+
 DecodeBitStream_3Bits_Words_CreateLookup
 
 		movem.l	d2-d4/a2,-(sp)
 
 		; Generate A: **********a2a1a0
-
+		
 		lea	DecodeBitStream_3Bits_Lookup_AB(a0),a2
 		move.w	#(1<<5)-1,d0
 .genA	
@@ -190,6 +192,8 @@ CNTR	SET	CNTR+4
 ;	a1	uint8*				input stream
 ;	a2	DecodeBitStream_3Bits_Lookup*	lookup tables
 
+		XDEF	DecodeBitStream_3Bits_Words_InitState
+
 DecodeBitStream_3Bits_Words_InitState
 		move.l	a1,DecodeBitStream_3Bits_ReadPtr(a0)
 		move.l	a2,DecodeBitStream_3Bits_Lookup(a0)
@@ -206,12 +210,14 @@ DecodeBitStream_3Bits_Words_InitState
 ; out:
 ;	a1	uint16_t*			output buffer write ptr after writes
 
+		XDEF	DecodeBitStream_3Bits_Words_Decode
+
 DecodeBitStream_3Bits_Words_Decode
 
 		movem.l	d2/a2,-(sp)
 
 		move.w	DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0),d1
-		bne.s	.nCopyLeadingEntries
+		beq.s	.nCopyLeadingEntries
 
 		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf+8*2(a0),a2
 		sub.w	d1,a2
@@ -243,7 +249,7 @@ DecodeBitStream_3Bits_Words_Decode
 .nCopyLeadingEntries
 
 		tst.w	d0
-		beq.s	.decodeDoneWithoutStreamReads
+		beq	.decodeDoneWithoutStreamReads
 		
 		
 DECODE8		MACRO	temp0,temp1,output
@@ -309,21 +315,20 @@ DECODE8		MACRO	temp0,temp1,output
 		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf(a0),a1
 		DECODE8	d1,d2,a1
 		lea	-8*2(a1),a3
-		subq.w	#8*2,a1
 
-		move.w	d0,DecodeBitStream_3Bits_Decoded8Entries_NumConsumed(a0)
+		moveq	#8,d1
+		sub.w	d0,d1
+		move.w	d1,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
 		
 		move.l	d3,a1
-		not.w	d0
-		add.w	d0,d0
+		add.w	d1,d1
 		
-		jmp	.copyTrailingEntriesEnd(pc,d0.w)
+		jmp	.copyTrailingEntries(pc,d1.w)
 		
 .copyTrailingEntries
 		REPT	8
 		move.w	(a3)+,(a1)+
 		ENDR
-.copyTrailingEntriesEnd
 
 .decodeDoneWithStreamReads
 		move.l	a2,DecodeBitStream_3Bits_ReadPtr(a0)
