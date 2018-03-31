@@ -206,10 +206,14 @@ DecodeBitStream_3Bits_Words_InitState
 
 DecodeBitStream_3Bits_Words_Decode
 
-		movem.l	d2-d3/a2,-(sp)
+		movem.l	d2/a2,-(sp)
 
 		move.w	DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0),d1
 		bne.s	.nCopyLeadingEntries
+
+		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf+8*2(a0),a2
+		sub.w	d1,a2
+		sub.w	d1,a2
 
 		; copy a portion of previously-decoded buffer contents to output buffer,
 		;   up until the next even 8-entry group
@@ -221,13 +225,8 @@ DecodeBitStream_3Bits_Words_Decode
 .nClamp
 		sub.w	d2,d0
 
-		move.w	d1,d3
-		sub.w	d2,d3
-		move.w	d3,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
-		
-		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf+8*2(a0),a2
-		add.w	d1,d1
-		sub.w	d1,a2
+		sub.w	d2,d1
+		move.w	d1,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
 
 		not.w	d2
 		add.w	d2,d2
@@ -278,7 +277,7 @@ DECODE8		MACRO	temp0,temp1,output
 		move.l	(a6,\2.l),(\3)+		; extract h, g
 		ENDM
 
-		movem.l	a3-a6,-(sp)
+		movem.l	d3/a3-a6,-(sp)
 
 		move.l	DecodeBitStream_3Bits_ReadPtr(a0),a2
 		move.l	DecodeBitStream_3Bits_Lookup(a0),a6
@@ -326,10 +325,10 @@ DECODE8		MACRO	temp0,temp1,output
 .decodeDoneWithStreamReads
 		move.l	a2,DecodeBitStream_3Bits_ReadPtr(a0)
 
-		movem.l	(sp)+,a3-a6
+		movem.l	(sp)+,d3/a3-a6
 		
 .decodeDoneWithoutStreamReads
 
-		movem.l	(sp)+,d2-d3/a2
+		movem.l	(sp)+,d2/a2
 
 		rts
