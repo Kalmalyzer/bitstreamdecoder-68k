@@ -202,7 +202,9 @@ DecodeBitStream_3Bits_Words_InitState
 ; in:
 ;	d0.w	uint16_t			number of 3-bit entries to decode
 ;	a0	DecodeBitStream_3Bits_State*	decoder state
-;	a1	uint16_t*			output buffer
+;	a1	uint16_t*			output buffer write ptr
+; out:
+;	a1	uint16_t*			output buffer write ptr after writes
 
 DecodeBitStream_3Bits_Words_Decode
 
@@ -306,11 +308,12 @@ DECODE8		MACRO	temp0,temp1,output
 		move.l	a1,d3
 		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf(a0),a1
 		DECODE8	d1,d2,a1
+		lea	-8*2(a1),a3
 		subq.w	#8*2,a1
 
 		move.w	d0,DecodeBitStream_3Bits_Decoded8Entries_NumConsumed(a0)
 		
-		move.l	d3,a3
+		move.l	d3,a1
 		not.w	d0
 		add.w	d0,d0
 		
@@ -318,7 +321,7 @@ DECODE8		MACRO	temp0,temp1,output
 		
 .copyTrailingEntries
 		REPT	8
-		move.w	(a1)+,(a3)+
+		move.w	(a3)+,(a1)+
 		ENDR
 .copyTrailingEntriesEnd
 
