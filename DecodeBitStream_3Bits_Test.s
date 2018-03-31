@@ -24,26 +24,22 @@ Initialize
 		rts
 
 Decode
-		
 		lea	BitStreamOutput,a1
 		lea	Decode_State,a0
 		move.w	#2,d0
 		bsr	DecodeBitStream_3Bits_Words_Decode
 
-;		lea	BitStreamOutput,a1
-;		lea	Decode_State,a0
-;		move.w	#0,d0
-;		bsr	DecodeBitStream_3Bits_Words_Decode
+		lea	Decode_State,a0
+		move.w	#0,d0
+		bsr	DecodeBitStream_3Bits_Words_Decode
 
-;		lea	BitStreamOutput,a1
-;		lea	Decode_State,a0
-;		move.w	#6,d0
-;		bsr	DecodeBitStream_3Bits_Words_Decode
+		lea	Decode_State,a0
+		move.w	#6,d0
+		bsr	DecodeBitStream_3Bits_Words_Decode
 
-;		lea	BitStreamOutput,a1
-;		lea	Decode_State,a0
-;		move.w	#16,d0
-;		bsr	DecodeBitStream_3Bits_Words_Decode
+		lea	Decode_State,a0
+		move.w	#18,d0
+		bsr	DecodeBitStream_3Bits_Words_Decode
 
 		rts
 		
@@ -62,15 +58,16 @@ Validate
 		bne.s	.differentContent
 		subq.l	#1,d0
 		bne.s	.compareContent
-		moveq	#0,d0
+
+		moveq	#0,d0			; Exit code 0: decoded buffer matches expected
 		rts
 		
 .differentLengths
-		moveq	#21,d0
+		moveq	#21,d0			; Exit code 21: decoded buffer length does not match expected length
 		rts
 
 .differentContent
-		moveq	#22,d0
+		moveq	#22,d0			; Exit code 22: decoded buffer length matches expected length, but content differs
 		rts
 		
 		section	data,data
@@ -88,6 +85,10 @@ BitStreamInput
 		dc.b	%11000110
 		dc.b	%11111010
 
+		dc.b	%01110111
+		dc.b	%00111001
+		dc.b	%00000101
+		
 		even
 		
 Decode_TranslationTable
@@ -127,6 +128,9 @@ ExpectedOutput
 		dc.w	$5a55
 		dc.w	$6966
 		dc.w	$7877
+
+		dc.w	$7877
+		dc.w	$6966
 ExpectedOutputEnd
 
 		section	bss,bss
