@@ -1,3 +1,11 @@
+;
+; 3-bit stream decoder, optimized for 68000
+;
+; These routines will decode a stream of 3-bit entries into 16-bit word entries using a user-provided lookup table.
+; The stream can be decoded incrementally.
+;
+; When decoding long runs, the performance will tend toward about 22c/entry on 68000.
+
 
 		include	"DecodeBitStream_3Bits.i"
 

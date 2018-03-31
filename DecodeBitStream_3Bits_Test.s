@@ -1,4 +1,6 @@
 
+; Test program for 3-bit stream decoder
+
 		include	"DecodeBitStream_3Bits.i"
 
 		section	code,code
