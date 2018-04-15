@@ -4,7 +4,7 @@
 ; These routines will decode a stream of 3-bit entries into 16-bit word entries using a user-provided lookup table.
 ; The stream can be decoded incrementally.
 ;
-; When decoding long runs, the performance will tend toward about 22c/entry on 68000.
+; When decoding long runs, the performance will tend toward about 24c/entry on 68000.
 
 
 		include	"DecodeBitStream_3Bits.i"
@@ -27,129 +27,94 @@ DecodeBitStream_3Bits_Words_CreateLookup
 
 		movem.l	d2-d4/a2,-(sp)
 
-		; Generate A: **********a2a1a0
+		; Generate A: a2a1a0******----
 		
 		lea	DecodeBitStream_3Bits_Lookup_AB(a0),a2
-		move.w	#(1<<5)-1,d0
+		move.w	#(1<<3)-1,d0
 .genA	
+		move.w	(a1)+,d1
+CNTR	SET	0
+		REPT	(1<<3)
+		move.w	d1,CNTR(a2)
+CNTR	SET	CNTR+4
+		ENDR
+		add.w	#(1<<3)*4,a2
+		dbf	d0,.genA
+		sub.w	#(1<<3)*2,a1
+
+		; Generate B: ******b2b1b0----
+	
+		lea	DecodeBitStream_3Bits_Lookup_AB+2(a0),a2
+		move.w	#(1<<3)-1,d0
+.genB
 CNTR	SET	0
 		REPT	(1<<3)
 		move.w	(a1)+,CNTR(a2)
 CNTR	SET	CNTR+4
 		ENDR
-		add.w	#(1<<3)*4,a2
 		sub.w	#(1<<3)*2,a1
-		dbf	d0,.genA
+		add.w	#(1<<3)*4,a2
+		dbf	d0,.genB
 
-		; Generate B: ****b2b1b0******
+		; Generate C: c2c1c0--
+
+		lea	DecodeBitStream_3Bits_Lookup_C(a0),a2
+		REPT	(1<<3)/2
+		move.l	(a1)+,(a2)+
+		ENDR
+		sub.w	#(1<<3)*2,a1
 	
-		lea	DecodeBitStream_3Bits_Lookup_AB+2(a0),a2
-		moveq	#(1<<2)-1,d0
-.genBOuter
-		swap	d0
+		; Generate D: d2d1d0******----
+		
+		lea	DecodeBitStream_3Bits_Lookup_DE(a0),a2
 		move.w	#(1<<3)-1,d0
-.genBInner
+.genD	
 		move.w	(a1)+,d1
-
 CNTR	SET	0
 		REPT	(1<<3)
 		move.w	d1,CNTR(a2)
 CNTR	SET	CNTR+4
 		ENDR
 		add.w	#(1<<3)*4,a2
-		dbf	d0,.genBInner
+		dbf	d0,.genD
 		sub.w	#(1<<3)*2,a1
-		swap	d0
-		dbf	d0,.genBOuter
 
-		; Generate C: c1c0**************c2
-
-		lea	DecodeBitStream_3Bits_Lookup_CF(a0),a2
-		move.w	#(1<<2)-1,d0
-.genCOuter
-		swap	d0
-		move.w	(a1),d1
-		move.w	(1<<2)*2(a1),d2
-		move.w	#(1<<7)-1,d0
-.genCInner
-		move.w	d1,(a2)
-		move.w	d2,4(a2)
-		addq.w	#(1<<1)*4,a2
-		dbf	d0,.genCInner
-		addq.w	#2,a1
-		swap	d0
-		dbf	d0,.genCOuter
-		subq.w	#(1<<2)*2,a1
+		; Generate E: ******e2e1e0----
 	
-		; Generate F: f0************f2f1
+		lea	DecodeBitStream_3Bits_Lookup_DE+2(a0),a2
+		move.w	#(1<<3)-1,d0
+.genE
+CNTR	SET	0
+		REPT	(1<<3)
+		move.w	(a1)+,CNTR(a2)
+CNTR	SET	CNTR+4
+		ENDR
+		sub.w	#(1<<3)*2,a1
+		add.w	#(1<<3)*4,a2
+		dbf	d0,.genE
 
-		lea	DecodeBitStream_3Bits_Lookup_CF+2(a0),a2
-		move.w	#(1<<1)-1,d0
+		; Generate F: f1f0************f2--
+
+		lea	DecodeBitStream_3Bits_Lookup_F(a0),a2
+		move.w	#(1<<2)-1,d0
 .genFOuter
 		swap	d0
 		move.w	(a1),d1
-		move.w	1*4(a1),d2
-		move.w	2*4(a1),d3
-		move.w	3*4(a1),d4
+		move.w	(1<<2)*2(a1),d2
 		move.w	#(1<<6)-1,d0
 .genFInner
-		move.w	d1,(a2)
-		move.w	d2,1*4(a2)
-		move.w	d3,2*4(a2)
-		move.w	d4,3*4(a2)
-		add.w	#(1<<2)*4,a2
+		move.w	d1,(a2)+
+		move.w	d2,(a2)+
 		dbf	d0,.genFInner
 		addq.w	#2,a1
 		swap	d0
 		dbf	d0,.genFOuter
-		subq.w	#(1<<1)*2,a1
+		subq.w	#(1<<2)*2,a1
 
-		; Generate D: ************d2d1d0**
-
-		lea	DecodeBitStream_3Bits_Lookup_DE(a0),a2
-		moveq	#(1<<6)-1,d0
-.genDOuter
-		swap	d0
-		move.w	#(1<<3)-1,d0
-.genDInner
-		move.w	(a1)+,d1
-
-CNTR	SET	0
-		REPT	(1<<1)
-		move.w	d1,CNTR(a2)
-CNTR	SET	CNTR+4
-		ENDR
-		addq.w	#(1<<1)*4,a2
-		dbf	d0,.genDInner
-		sub.w	#(1<<3)*2,a1
-		swap	d0
-		dbf	d0,.genDOuter
-
-		; Generate E: ******e2e1e0********
-
-		lea	DecodeBitStream_3Bits_Lookup_DE+2(a0),a2
-		moveq	#(1<<3)-1,d0
-.genEOuter
-		swap	d0
-		move.w	#(1<<3)-1,d0
-.genEInner
-		move.w	(a1)+,d1
-
-CNTR	SET	0
-		REPT	(1<<4)
-		move.w	d1,CNTR(a2)
-CNTR	SET	CNTR+4
-		ENDR
-		add.w	#(1<<4)*4,a2
-		dbf	d0,.genEInner
-		sub.w	#(1<<3)*2,a1
-		swap	d0
-		dbf	d0,.genEOuter
-
-		; Generate G: ********g2g1g0****
+		; Generate G: ****g2g1g0******----
 
 		lea	DecodeBitStream_3Bits_Lookup_GH(a0),a2
-		moveq	#(1<<4)-1,d0
+		moveq	#(1<<2)-1,d0
 .genGOuter
 		swap	d0
 		move.w	#(1<<3)-1,d0
@@ -157,36 +122,29 @@ CNTR	SET	CNTR+4
 		move.w	(a1)+,d1
 
 CNTR	SET	0
-		REPT	(1<<2)
+		REPT	(1<<3)
 		move.w	d1,CNTR(a2)
 CNTR	SET	CNTR+4
 		ENDR
-		add.w	#(1<<2)*4,a2
+		add.w	#(1<<3)*4,a2
 		dbf	d0,.genGInner
 		sub.w	#(1<<3)*2,a1
 		swap	d0
 		dbf	d0,.genGOuter
 
-		; Generate H: **h2h1h0**********
+		; Generate H: **********h2h1h0---
 
 		lea	DecodeBitStream_3Bits_Lookup_GH+2(a0),a2
-		moveq	#(1<<1)-1,d0
-.genHOuter
-		swap	d0
-		move.w	#(1<<3)-1,d0
-.genHInner
-		move.w	(a1)+,d1
-
+		move.w	#(1<<5)-1,d0
+.genH
 CNTR	SET	0
-		REPT	(1<<5)
-		move.w	d1,CNTR(a2)
+		REPT	(1<<3)
+		move.w	(a1)+,CNTR(a2)
 CNTR	SET	CNTR+4
 		ENDR
-		add.w	#(1<<5)*4,a2
-		dbf	d0,.genHInner
 		sub.w	#(1<<3)*2,a1
-		swap	d0
-		dbf	d0,.genHOuter
+		add.w	#(1<<3)*4,a2
+		dbf	d0,.genH
 
 		movem.l	(sp)+,d2-d4/a2
 
@@ -258,48 +216,56 @@ DecodeBitStream_3Bits_Words_Decode
 
 		tst.w	d0
 		beq	.decodeDoneWithoutStreamReads
+
+		moveq	#-4,d1
+		moveq	#0,d2
 		
-		
-DECODE8		MACRO	temp0,temp1,output
+DECODE8		MACRO	fc_mask,temp0_cleared_upperbytes,temp1,temp2
+
+		; fc_mask - contains $fc in lowest bytes
+		; temp0_cleared_upperbytes - contains $000000 in top 3 bytes
 
 		; Read 3 bytes, output 8 entries
 
-		; a2 - input stream
-		; a3 - lookup table for     ****b2b1b0a2a1a0 -> word with a, word with b
-		; a4 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with c, <unused>
-		; a4 - lookup table for   f0h2h1h0g2g1g0f2f1 -> <unused>, word with f
-		; a5 - lookup table for c1c0f0e2e1e0d2d1d0c2 -> word with d, word with e
-		; a6 - lookup table for   f0h2h1h0g2g1g0f2f1 -> word with g, word with h
+		; a2    - input stream
+		; a3+16 - lookup table for     a2a1a0b2b1b0---- -> word with a, word with b
+		; a3    - lookup table for             c2c1c0-- -> word with c
+		; a4    - lookup table for     d2d1d0e2e1e0---- -> word with d, word with e
+		; a5    - lookup table for f1f0g2g1g0h2h1h0f2-- -> word with f
+		; a6    - lookup table for f1f0g2g1g0h2h1h0---- -> word with g, word with h
 
-		moveq	#0,\1
-		move.b	(a2)+,\1		; fetch c[1..0], b, a
-		add.w	\1,\1
-		add.w	\1,\1
-		move.l	(a3,\1.l),(\3)+		; extract b, a
-
-		moveq	#0,\2
-		move.b	(a2)+,\1		; fetch f[0], e, d, c[2]
-		move.b	\1,\2
-		add.w	\1,\1
-		add.w	\1,\1
-		move.w	(a4,\1.l),(\3)+		; extract c
-		move.l	(a5,\1.l),(\3)+		; extract e, d
-
-		add.w	\2,\2
-		move.b	(a2)+,\2		; fetch h, g, f[2..1]
-		add.w	\2,\2
-		add.w	\2,\2
-		move.w	2(a4,\2.l),(\3)+	; extract f
-		move.l	(a6,\2.l),(\3)+		; extract h, g
+		moveq	#0,\3
+		move.b	(a2)+,\3		; Fetch %a2a1a0b2b1b0c2c1
+		move.l	\3,\4
+		and.b	\1,\3			; %a2a1a0b2b1b0----
+		move.l	DecodeBitStream_3Bits_Lookup_AB-DecodeBitStream_3Bits_Lookup_C(a3,\3.l),(a1)+	; Lookup a,b
+		eor.b	\3,\4
+		move.b	(a2)+,\2		; Fetch %c0d2d1d0e2e1e0f2
+		add.b	\2,\2			; %d2d1d0e2e1e0f2--
+		addx.b	\4,\4			; %c2c1c0
+		add.b	\4,\4			; %c2c1c0--
+		move.w	(a3,\4.l),(a1)+		; Lookup c
+		moveq	#0,\3
+		move.b	(a2)+,\3		; Fetch %f1f0g2g1g0h2h1h0
+		move.l	\2,\4			; %d2d1d0e2e1e0f2--
+		and.b	\1,\2			; %d2d1d0e2e1e0----
+		eor.b	\2,\4			; %f2--
+		move.l	(a4,\2.l),(a1)+		; Lookup d,e
+		add.w	\3,\3			; %f1f0g2g1g0h2h1h0--
+		add.w	\3,\3			; %f1f0g2g1g0h2h1h0----
+		or.w	\3,\4			; %f1f0g2g1g0h2h1h0f2--
+		move.w	(a5,\4.l),(a1)+		; Lookup f
+		move.l	(a6,\3.l),(a1)+		; Lookup g,h
+		
 		ENDM
 
-		movem.l	d3/a3-a6,-(sp)
+		movem.l	d3-d4/a3-a6,-(sp)
 
 		move.l	DecodeBitStream_3Bits_ReadPtr(a0),a2
 		move.l	DecodeBitStream_3Bits_Lookup(a0),a6
-		lea	DecodeBitStream_3Bits_Lookup_AB(a6),a3
-		lea	DecodeBitStream_3Bits_Lookup_CF(a6),a4
-		lea	DecodeBitStream_3Bits_Lookup_DE(a6),a5
+		lea	DecodeBitStream_3Bits_Lookup_C(a6),a3	; Used as base ptr for both C and AB
+		lea	DecodeBitStream_3Bits_Lookup_DE(a6),a4
+		lea	DecodeBitStream_3Bits_Lookup_F(a6),a5
 		lea	DecodeBitStream_3Bits_Lookup_GH(a6),a6
 
 		subq.w	#8,d0
@@ -308,7 +274,7 @@ DECODE8		MACRO	temp0,temp1,output
 		; Decode aligned groups of 8 entries and output directly to output buffer
 		
 .decode8Direct
-		DECODE8	d1,d2,a1
+		DECODE8	d1,d2,d3,d4
 
 		subq.w	#8,d0
 		bpl.s	.decode8Direct
@@ -319,16 +285,16 @@ DECODE8		MACRO	temp0,temp1,output
 
 		; Decode group of 8 entries into temp buffer, and copy a portion thereof to output buffer
 		
-		move.l	a1,d3
+		move.l	a1,-(sp)
 		lea	DecodeBitStream_3Bits_Decoded8Entries_Buf(a0),a1
-		DECODE8	d1,d2,a1
+		DECODE8	d1,d2,d3,d4
 		lea	-8*2(a1),a3
 
 		moveq	#8,d1
 		sub.w	d0,d1
 		move.w	d1,DecodeBitStream_3Bits_Decoded8Entries_NumRemaining(a0)
 		
-		move.l	d3,a1
+		move.l	(sp)+,a1
 		add.w	d1,d1
 		
 		jmp	.copyTrailingEntries(pc,d1.w)
@@ -341,7 +307,7 @@ DECODE8		MACRO	temp0,temp1,output
 .decodeDoneWithStreamReads
 		move.l	a2,DecodeBitStream_3Bits_ReadPtr(a0)
 
-		movem.l	(sp)+,d3/a3-a6
+		movem.l	(sp)+,d3-d4/a3-a6
 		
 .decodeDoneWithoutStreamReads
 

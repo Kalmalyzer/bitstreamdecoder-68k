@@ -9,7 +9,7 @@ start
 		bsr	Initialize
 
 		bsr	Decode
-		
+
 		bsr	Validate
 		rts
 
@@ -43,8 +43,10 @@ Decode
 		move.w	#18,d0
 		bsr	DecodeBitStream_3Bits_Words_Decode
 
+		move.l	a1,d0
+		sub.l	a0,d0
 		rts
-		
+
 Validate
 		sub.l	#BitStreamOutput,a1
 		move.l	a1,d1
@@ -75,21 +77,21 @@ Validate
 		section	data,data
 
 BitStreamInput
-		dc.b	%10001000
-		dc.b	%11000110
+		dc.b	%00000101
+		dc.b	%00111001
+		dc.b	%01110111
+
 		dc.b	%11111010
+		dc.b	%11000110
+		dc.b	%10001000
 		
-		dc.b	%01110111
-		dc.b	%00111001
 		dc.b	%00000101
+		dc.b	%00111001
+		dc.b	%01110111
 
-		dc.b	%10001000
-		dc.b	%11000110
 		dc.b	%11111010
-
-		dc.b	%01110111
-		dc.b	%00111001
-		dc.b	%00000101
+		dc.b	%11000010
+		dc.b	%10001000
 		
 		even
 		
