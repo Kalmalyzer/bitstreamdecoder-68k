@@ -40,7 +40,7 @@ clean:
 
 test : $(BINDIR)/test_DecodeBitStream_3Bits.exe
 
-$(BINDIR)/test_DecodeBitStream_3Bits.exe : $(OBJDIR)/test_DecodeBitStream_3Bits.o $(OBJDIR)/DecodeBitStream_3Bits.o | $(BINDIR)
+$(BINDIR)/test_DecodeBitStream_3Bits.exe : $(OBJDIR)/test_DecodeBitStream_3Bits.o $(OBJDIR)/DecodeBitStream_3Bits.o | $(BINDIR) $(TESTDIR)
 	# Link executable
 	vlink -bamigahunk -o $@ $^
 
