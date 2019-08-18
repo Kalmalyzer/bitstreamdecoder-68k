@@ -8,6 +8,8 @@ OBJDIR := .o
 DEPDIR := .d
 # intermediate directory for executables
 BINDIR := bin
+# intermediate directory for test results
+TESTDIR := junit
 
 # object files, auto generated from source files
 OBJS := $(patsubst %,$(OBJDIR)/%.o,$(basename $(SRCS)))
@@ -43,13 +45,14 @@ $(BINDIR)/test_DecodeBitStream_3Bits.exe : $(OBJDIR)/test_DecodeBitStream_3Bits.
 	vlink -bamigahunk -o $@ $^
 
 	# Run tests
-	testrunner-68k $(BINDIR)/test_DecodeBitStream_3Bits.exe
+	testrunner-68k --junit $(TESTDIR)/test_DecodeBitStream_3Bits.xml $(BINDIR)/test_DecodeBitStream_3Bits.exe
 
 # Rules for creating intermediate folders, when necessary
 
 $(DEPDIR): ; @mkdir -p $@
 $(OBJDIR): ; @mkdir -p $@
 $(BINDIR): ; @mkdir -p $@
+$(TESTDIR): ; @mkdir -p $@
 
 # Dependency handling
 

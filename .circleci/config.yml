@@ -2,7 +2,11 @@ version: 2
 jobs:
   build:
     docker:
-      - image: amigacitools/amiga-ci-tools:v1.0.3
+      - image: amigacitools/amiga-ci-tools:v1.0.8
     steps:
       - checkout
       - run: make test
+      - store_test_results:
+          path: ./junit	  
+      - store_artifacts:
+          path: ./junit
