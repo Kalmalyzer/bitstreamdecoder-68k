@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: amigacitools/amiga-ci-tools:latest
+      - image: amigacitools/amiga-ci-tools:v1.0.3
     steps:
       - checkout
       - run: make test
