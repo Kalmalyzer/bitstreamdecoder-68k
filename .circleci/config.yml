@@ -1,0 +1,8 @@
+version: 2
+jobs:
+ test:
+    docker:
+      - image: amigacitools/amiga-ci-tools:latest
+    steps:
+      - checkout
+      - run: make test
